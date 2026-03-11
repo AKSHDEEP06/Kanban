@@ -47,7 +47,7 @@ export function useKanban() {
   }, [tasks, isLoaded])
 
   const addTask = useCallback(
-    (title: string, description: string, priority: Priority, columnId: ColumnId = "todo", color?: string) => {
+    (title: string, description: string, priority: Priority, columnId: ColumnId = "todo", color?: string, deadline?: number) => {
       const newTask: Task = {
         id: generateId(),
         title,
@@ -56,6 +56,7 @@ export function useKanban() {
         columnId,
         color,
         createdAt: Date.now(),
+        deadline,
       }
       setTasks((prev) => [...prev, newTask])
     },
@@ -77,6 +78,10 @@ export function useKanban() {
 
   const deleteAllTasksInColumn = useCallback((columnId: ColumnId) => {
     setTasks((prev) => prev.filter((task) => task.columnId !== columnId))
+  }, [])
+
+  const deleteAllTasks = useCallback(() => {
+    setTasks([])
   }, [])
 
   const moveTask = useCallback((taskId: string, newColumnId: ColumnId) => {
@@ -118,6 +123,7 @@ export function useKanban() {
     updateTask,
     deleteTask,
     deleteAllTasksInColumn,
+    deleteAllTasks,
     moveTask,
     getTasksByColumn,
   }

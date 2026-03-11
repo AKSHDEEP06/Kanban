@@ -10,6 +10,7 @@ export interface Task {
   columnId: ColumnId
   color?: string
   createdAt: number
+  deadline?: number
 }
 
 export interface Column {

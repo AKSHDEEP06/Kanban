@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core"
-import { Search, Moon, Sun, Layers } from "lucide-react"
+import { Search, Moon, Sun, Layers, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { KanbanColumn } from "./kanban-column"
@@ -43,6 +43,7 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
     updateTask,
     deleteTask,
     deleteAllTasksInColumn,
+    deleteAllTasks,
     moveTask,
     getTasksByColumn,
   } = useKanban()
@@ -52,8 +53,9 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [targetColumn, setTargetColumn] = useState<ColumnId>("todo")
   const [activeColumn, setActiveColumn] = useState<ColumnId>("todo")
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{
-    type: "task" | "column"
+    type: "task" | "column" | "all"
     id?: string
     columnId?: ColumnId
   } | null>(null)
@@ -101,18 +103,22 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
   }, [])
 
   const handleSaveTask = useCallback(
-    (title: string, description: string, priority: Priority, color?: string) => {
-      addTask(title, description, priority, targetColumn, color)
+    (title: string, description: string, priority: Priority, columnId: ColumnId, color?: string, deadline?: number) => {
+      addTask(title, description, priority, columnId, color, deadline)
     },
-    [addTask, targetColumn]
+    [addTask]
   )
 
   const handleUpdateTask = useCallback(
-    (id: string, title: string, description: string, priority: Priority, color?: string) => {
-      updateTask(id, { title, description, priority, color })
+    (id: string, title: string, description: string, priority: Priority, columnId: ColumnId, color?: string, deadline?: number) => {
+      updateTask(id, { title, description, priority, columnId, color, deadline })
     },
     [updateTask]
   )
+
+  const handleTaskClick = useCallback((task: Task) => {
+    setDetailTask(task)
+  }, [])
 
   const handleDeleteTaskRequest = useCallback((id: string) => {
     setDeleteConfirm({ type: "task", id })
@@ -122,14 +128,20 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
     setDeleteConfirm({ type: "column", columnId })
   }, [])
 
+  const handleClearAllRequest = useCallback(() => {
+    setDeleteConfirm({ type: "all" })
+  }, [])
+
   const handleConfirmDelete = useCallback(() => {
     if (deleteConfirm?.type === "task" && deleteConfirm.id) {
       deleteTask(deleteConfirm.id)
     } else if (deleteConfirm?.type === "column" && deleteConfirm.columnId) {
       deleteAllTasksInColumn(deleteConfirm.columnId)
+    } else if (deleteConfirm?.type === "all") {
+      deleteAllTasks()
     }
     setDeleteConfirm(null)
-  }, [deleteConfirm, deleteTask, deleteAllTasksInColumn])
+  }, [deleteConfirm, deleteTask, deleteAllTasksInColumn, deleteAllTasks])
 
   const handleDeleteFromDialog = useCallback((id: string) => {
     setIsDialogOpen(false)
@@ -178,20 +190,32 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
               </div>
             </div>
 
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleTheme}
-              className="h-10 w-10 shrink-0 text-muted-foreground hover:bg-secondary rounded-[8px] transition-colors"
-              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDarkMode ? (
-                <Sun className="h-5 w-5 sm:h-5 sm:w-5 text-amber-400 hover:text-amber-500 transition-colors" />
-              ) : (
-                <Moon className="h-5 w-5 sm:h-5 sm:w-5 text-indigo-500 hover:text-indigo-600 transition-colors" />
-              )}
-            </Button>
+            {/* Clear All & Theme Toggle */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClearAllRequest}
+                className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-[8px] transition-colors"
+                aria-label="Clear all tasks"
+                title="Clear all tasks"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleTheme}
+                className="h-10 w-10 text-muted-foreground hover:bg-secondary rounded-[8px] transition-colors"
+                aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {isDarkMode ? (
+                  <Sun className="h-5 w-5 sm:h-5 sm:w-5 text-amber-400 hover:text-amber-500 transition-colors" />
+                ) : (
+                  <Moon className="h-5 w-5 sm:h-5 sm:w-5 text-indigo-500 hover:text-indigo-600 transition-colors" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -248,6 +272,7 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTaskRequest}
                 onDeleteAll={handleDeleteAllRequest}
+                onTaskClick={handleTaskClick}
                 isMobile
               />
             </div>
@@ -263,6 +288,7 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
                   onEditTask={handleEditTask}
                   onDeleteTask={handleDeleteTaskRequest}
                   onDeleteAll={handleDeleteAllRequest}
+                  onTaskClick={handleTaskClick}
                 />
               ))}
             </div>
@@ -275,6 +301,7 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
                   task={activeTask}
                   onEdit={() => { }}
                   onDelete={() => { }}
+                  onClick={() => { }}
                 />
               </div>
             ) : null}
@@ -302,14 +329,39 @@ export function KanbanBoard({ isDarkMode, onToggleTheme }: KanbanBoardProps) {
       <DeleteConfirmDialog
         open={!!deleteConfirm}
         onOpenChange={(open) => !open && setDeleteConfirm(null)}
-        title={deleteConfirm?.type === "column" ? "Delete All Tasks" : "Delete Task"}
+        title={
+          deleteConfirm?.type === "all"
+            ? "Clear All Tasks"
+            : deleteConfirm?.type === "column"
+            ? "Delete All Tasks"
+            : "Delete Task"
+        }
         description={
-          deleteConfirm?.type === "column"
+          deleteConfirm?.type === "all"
+            ? "Are you sure you want to clear all tasks from all columns? This action cannot be undone."
+            : deleteConfirm?.type === "column"
             ? `Are you sure you want to delete all tasks in the "${deleteConfirm.columnId ? COLUMN_CONFIG[deleteConfirm.columnId].title : ""}" column? This action cannot be undone.`
             : "Are you sure you want to delete this task? This action cannot be undone."
         }
         onConfirm={handleConfirmDelete}
       />
+
+      {/* ── Task Detail Dialog ── */}
+      {detailTask && (
+        <TaskDialog
+          open={!!detailTask}
+          onOpenChange={(open) => !open && setDetailTask(null)}
+          task={detailTask}
+          targetColumn={detailTask.columnId}
+          onSave={handleSaveTask}
+          onUpdate={handleUpdateTask}
+          onDelete={(id) => {
+            setDetailTask(null)
+            setDeleteConfirm({ type: "task", id })
+          }}
+          isDetailView
+        />
+      )}
     </div>
   )
 }

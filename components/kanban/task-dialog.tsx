@@ -29,9 +29,10 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void
   task?: Task | null
   targetColumn?: ColumnId
-  onSave: (title: string, description: string, priority: Priority, color?: string) => void
-  onUpdate?: (id: string, title: string, description: string, priority: Priority, color?: string) => void
+  onSave: (title: string, description: string, priority: Priority, columnId: ColumnId, color?: string, deadline?: number) => void
+  onUpdate?: (id: string, title: string, description: string, priority: Priority, columnId: ColumnId, color?: string, deadline?: number) => void
   onDelete?: (id: string) => void
+  isDetailView?: boolean
 }
 
 const TASK_COLORS = [
@@ -53,11 +54,14 @@ export function TaskDialog({
   onSave,
   onUpdate,
   onDelete,
+  isDetailView = false,
 }: TaskDialogProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [priority, setPriority] = useState<Priority>("medium")
   const [color, setColor] = useState<string>("")
+  const [columnId, setColumnId] = useState<ColumnId>(targetColumn)
+  const [deadline, setDeadline] = useState<string>("")
 
   const isEditing = !!task
 
@@ -67,22 +71,32 @@ export function TaskDialog({
       setDescription(task.description)
       setPriority(task.priority)
       setColor(task.color || "")
+      setColumnId(task.columnId)
+      setDeadline(
+        task.deadline
+          ? new Date(task.deadline).toISOString().split("T")[0]
+          : ""
+      )
     } else {
       setTitle("")
       setDescription("")
       setPriority("medium")
       setColor("")
+      setColumnId(targetColumn)
+      setDeadline("")
     }
-  }, [task, open])
+  }, [task, open, targetColumn])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
 
+    const deadlineTimestamp = deadline ? new Date(deadline).getTime() : undefined
+
     if (isEditing && task && onUpdate) {
-      onUpdate(task.id, title.trim(), description.trim(), priority, color)
+      onUpdate(task.id, title.trim(), description.trim(), priority, columnId, color, deadlineTimestamp)
     } else {
-      onSave(title.trim(), description.trim(), priority, color)
+      onSave(title.trim(), description.trim(), priority, columnId, color, deadlineTimestamp)
     }
     onOpenChange(false)
   }
@@ -92,12 +106,14 @@ export function TaskDialog({
       <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[425px] bg-card border-border mx-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">
-            {isEditing ? "Edit Task" : `Add Task to ${COLUMN_CONFIG[targetColumn].title}`}
+            {isDetailView ? "Task Details" : isEditing ? "Edit Task" : `Add Task`}
           </DialogTitle>
           <DialogDescription>
-            {isEditing
+            {isDetailView
+              ? "View and edit task details below."
+              : isEditing
               ? "Update the task details below."
-              : `This task will be added to the "${COLUMN_CONFIG[targetColumn].title}" column.`}
+              : "Fill in the details for your new task."}
           </DialogDescription>
         </DialogHeader>
 
@@ -130,26 +146,58 @@ export function TaskDialog({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priority" className="text-foreground">
+                Priority
+              </Label>
+              <Select value={priority} onValueChange={(val) => setPriority(val as Priority)}>
+                <SelectTrigger className="bg-input border-border text-foreground">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="low" className="text-primary">
+                    Low
+                  </SelectItem>
+                  <SelectItem value="medium" className="text-amber-400">
+                    Medium
+                  </SelectItem>
+                  <SelectItem value="high" className="text-destructive">
+                    High
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="column" className="text-foreground">
+                Column
+              </Label>
+              <Select value={columnId} onValueChange={(val) => setColumnId(val as ColumnId)}>
+                <SelectTrigger className="bg-input border-border text-foreground">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="in-progress">In Progress</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="priority" className="text-foreground">
-              Priority
+            <Label htmlFor="deadline" className="text-foreground">
+              Deadline{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
             </Label>
-            <Select value={priority} onValueChange={(val) => setPriority(val as Priority)}>
-              <SelectTrigger className="bg-input border-border text-foreground">
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border">
-                <SelectItem value="low" className="text-primary">
-                  Low
-                </SelectItem>
-                <SelectItem value="medium" className="text-amber-400">
-                  Medium
-                </SelectItem>
-                <SelectItem value="high" className="text-destructive">
-                  High
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              id="deadline"
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="bg-input border-border text-foreground"
+            />
           </div>
 
           <div className="space-y-3">

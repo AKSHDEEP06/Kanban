@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   onEditTask: (task: Task) => void
   onDeleteTask: (id: string) => void
   onDeleteAll: (columnId: ColumnId) => void
+  onTaskClick: (task: Task) => void
   isMobile?: boolean
 }
 
@@ -25,6 +26,7 @@ export function KanbanColumn({
   onEditTask,
   onDeleteTask,
   onDeleteAll,
+  onTaskClick,
   isMobile = false,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
@@ -122,6 +124,7 @@ export function KanbanColumn({
               task={task}
               onEdit={onEditTask}
               onDelete={onDeleteTask}
+              onClick={onTaskClick}
               isMobile={isMobile}
             />
           ))
